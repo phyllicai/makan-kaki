@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Makan Kaki · post-game makan agent</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏸</text></svg>">
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo">🏸</span><div><h1>Makan Kaki</h1><p>Game over. Where do we makan? An agent that finds the supper spot your whole badminton group will actually like.</p></div></div>
+  <div id="mode" class="badge">…</div>
+</header>
+
+<main class="grid">
+  <section class="panel" id="setup">
+    <h2>1 · The session</h2>
+    <div class="row">
+      <label>Court area<select id="court"></select></label>
+      <label>Day<select id="day"></select></label>
+      <label>Game ends<input id="endTime" type="time" value="22:30"/></label>
+    </div>
+    <div class="row">
+      <label>Max distance <output id="radiusOut">3.0 km</output><input id="radius" type="range" min="1000" max="10000" step="500" value="3000"/></label>
+      <label>Budget<select id="budget"><option value="1">$ cheap eats</option><option value="2" selected>$$ normal</option><option value="3">$$$ treat</option><option value="">any</option></select></label>
+    </div>
+
+    <h2>2 · The kakis <button class="ghost" id="addMember">+ add player</button></h2>
+    <div id="members"></div>
+    <button id="go" class="primary">Find our makan spot</button>
+    <p class="fine">Tip: cravings can be dishes (“char kway teow”), cuisines or vibes. Liked places help Qloo learn each player’s taste.</p>
+  </section>
+
+  <section class="panel" id="out">
+    <div id="empty" class="empty">
+      <div class="big">🍜</div>
+      <p>Add your group and hit <b>Find our makan spot</b>. The agent resolves each player’s taste through Qloo, scores every nearby spot <i>for every player</i>, enforces halal / vegetarian / late-night rules, and widens the search if nothing fits.</p>
+    </div>
+    <div id="results" hidden>
+      <div class="resHead"><h2>Top picks</h2><span id="stats" class="muted"></span></div>
+      <div class="split">
+        <div id="cards"></div>
+        <div><svg id="map" viewBox="0 0 300 300" aria-label="map of court and venues"></svg><div id="rejected"></div></div>
+      </div>
+      <details id="traceBox" open><summary>How the agent decided <span class="muted">(agent trace)</span></summary><ol id="trace"></ol></details>
+    </div>
+  </section>
+</main>
+<footer>Built for the Qloo Agentic Hackathon · taste data by <a href="https://www.qloo.com" target="_blank" rel="noopener">Qloo</a> · <span id="footMode"></span></footer>
+
+<template id="memberTpl">
+  <div class="member">
+    <div class="mrow">
+      <input class="name" placeholder="Name" />
+      <div class="diet">
+        <label><input type="checkbox" value="halal"/> Halal</label>
+        <label><input type="checkbox" value="vegetarian"/> Veg</label>
+        <label><input type="checkbox" value="pork_free"/> No pork</label>
+      </div>
+      <button class="x" title="remove">×</button>
+    </div>
+    <input class="cravings" placeholder="Cravings: nasi lemak, teh tarik…" />
+    <input class="liked" placeholder="Places they love (optional): Village Park Restaurant…" />
+  </div>
+</template>
+<script type="module" src="/app.js"></script>
+</body>
+</html>

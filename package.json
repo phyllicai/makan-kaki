@@ -1,0 +1,14 @@
+{
+  "name": "makan-kaki",
+  "version": "1.0.0",
+  "description": "Post-game makan agent for badminton groups, grounded in Qloo's taste graph.",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test test/",
+    "smoke:live": "node scripts/smoke-live.js"
+  }
+}
