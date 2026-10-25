@@ -6,6 +6,8 @@ Every badminton group in Malaysia has the same argument at 10:30pm. Aina needs h
 
 Built for the [Qloo Agentic Hackathon](https://qloo.devpost.com/).
 
+**Live demo:** https://makan-kaki-production.up.railway.app (one-click sample run: [https://makan-kaki-production.up.railway.app/?autorun](https://makan-kaki-production.up.railway.app/?autorun)). It currently runs in **mock mode** with fictional venues while the Qloo API key is pending, and the UI shows a "MOCK DATA" badge.
+
 ![screenshot](screenshot.png)
 
 ## Why Qloo matters here
@@ -59,7 +61,7 @@ LLM_API_KEY=... LLM_BASE_URL=https://api.openai.com/v1 LLM_MODEL=gpt-4o-mini npm
 Any OpenAI-compatible Chat Completions endpoint works. Without it, ranking and explanations are fully deterministic.
 
 ### Deploy
-`Dockerfile` included (`PORT` env respected). It works on any Node/Docker host (Render, Railway, Fly.io, etc.). Set `QLOO_API_KEY` as a secret on the host and never commit it. There is a basic per-IP rate limit (20 plans/min) to protect the API quota.
+Live instance: https://makan-kaki-production.up.railway.app (Railway). `Dockerfile` included (`PORT` env respected). It works on any Node/Docker host (Render, Railway, Fly.io, etc.). Set `QLOO_API_KEY` as a secret on the host and never commit it. There is a basic per-IP rate limit (20 plans/min) to protect the API quota.
 
 ## Mock mode, honestly
 Without `QLOO_API_KEY`, the app uses `src/qloo/mock.js`. It contains **fictional venues** with synthetic affinities around real Malaysian area centroids, and the UI shows a "MOCK DATA" badge. It exists so the UI and agent can be developed and tested without a key. The submitted demo should run in live mode.

@@ -1,0 +1,4 @@
+name = "makan-kaki"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+# Run `node scripts/build-worker.js` first to generate src/static.gen.js

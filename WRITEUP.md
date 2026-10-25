@@ -1,6 +1,8 @@
 # Makan Kaki: the post-game makan agent
 *Agents, but with taste, for the 10:30pm "where do we makan?" argument.*
 
+**Try it:** https://makan-kaki-production.up.railway.app · sample group in one click: https://makan-kaki-production.up.railway.app/?autorun · code: https://github.com/phyllicai/makan-kaki (MIT). The demo currently runs in mock mode (fictional venues, "MOCK DATA" badge shown) until the Qloo API key arrives.
+
 ## Inspiration
 In Malaysia, badminton doesn't end at the last rally. It ends at the mamak. Every week our group stands outside the court, sweaty and starving, doing the same negotiation. One kaki needs halal, one is vegetarian, one wants char kway teow, one wants a burger, and the place we pick has to still be open by the time we've showered and driven over. We usually give up and go to the same 24-hour mamak again.
 
