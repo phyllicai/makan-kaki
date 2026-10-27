@@ -4,6 +4,7 @@
 import { COURTS } from '../data/courts.js';
 import { keywordsToCuisines } from '../data/vocab.js';
 import { groupConstraints, checkVenue, groupScore, addMinutes, DIET_LABEL } from './scoring.js';
+import { DIET_SIGNAL_TAGS } from '../diet/rules.js';
 
 const MAX_ITER = 3;
 const WANT_PASSING = 3;
@@ -69,22 +70,35 @@ export async function runAgent(input, { qloo, llm = null, now = () => Date.now()
   log('think', needs.length ? `Hard constraints: ${needs.map(n => DIET_LABEL[n]).join(', ')}; open at ${arriveAt}` : `No dietary constraints; must be open at ${arriveAt}`, { needs });
 
   // ---------- 3–5. Act / observe / reflect loop ----------
-  let ranked = [], rejected = [], iter = 0;
+  let ranked = [], rejected = [], maybe = [], iter = 0;
+  const keep = new Map(), keepMaybe = new Map(); // best passing rows across all search rounds
   const allTags = [...new Set(members.flatMap(m => m.tagIds))];
   const allEntities = [...new Set(members.flatMap(m => m.entityIds))];
   while (iter < MAX_ITER) {
     iter++;
     const candidates = await qloo.placeInsights({ lat: court.lat, lon: court.lon, radiusM, entityIds: allEntities, tagIds: allTags, day, priceMax: budgetMax ?? undefined, take: 40 });
     log('tool', `Qloo Insights: ${candidates.length} candidate spots within ${(radiusM / 1000).toFixed(1)} km`, { iteration: iter, top: candidates.slice(0, 5).map(c => `${c.name} (${c.affinity ?? '?'})`) });
+    // Dietary retrieval: also pull spots Qloo itself tags halal / vegetarian, ranked by the same group taste.
+    for (const need of ['halal', 'vegetarian'].filter(n => needs.includes(n))) {
+      const extra = await qloo.placeInsights({ lat: court.lat, lon: court.lon, radiusM, entityIds: allEntities, tagIds: allTags, filterTagIds: DIET_SIGNAL_TAGS[need], day, priceMax: budgetMax ?? undefined, take: 25 }).catch(() => []);
+      const seen = new Set(candidates.map(c => c.id));
+      const added = extra.filter(c => !seen.has(c.id));
+      candidates.push(...added);
+      log('tool', `Qloo Insights (filter: ${need}-tagged): +${added.length} spots`, { iteration: iter, top: added.slice(0, 5).map(c => c.name) });
+      if (need === 'halal') break; // one diet-filtered pull per round keeps us inside the rate limit
+    }
     if (!candidates.length) { if (!reflect('no candidates')) break; continue; }
 
     // Per-player affinity for each candidate: one Insights call per player, restricted to the candidate set.
     const ids = candidates.map(c => c.id);
     const perMember = {};
     for (const m of members) {
-      const rows = (m.tagIds.length || m.entityIds.length)
-        ? await qloo.placeInsights({ lat: court.lat, lon: court.lon, radiusM, entityIds: m.entityIds, tagIds: m.tagIds, restrictToIds: ids, take: ids.length, explain: false }).catch(() => [])
-        : [];
+      const rows = [];
+      // Qloo caps take at 50, so score the candidate set in chunks.
+      if (m.tagIds.length || m.entityIds.length) for (let i = 0; i < ids.length; i += 50) {
+        const chunk = ids.slice(i, i + 50);
+        rows.push(...await qloo.placeInsights({ lat: court.lat, lon: court.lon, radiusM, entityIds: m.entityIds, tagIds: m.tagIds, restrictToIds: chunk, take: chunk.length, explain: false }).catch(() => []));
+      }
       perMember[m.name] = Object.fromEntries(rows.map(r => [r.id, r.affinity ?? 0]));
     }
     // Live affinities aren't guaranteed to be 0..1 across calls; rescale per player so nobody dominates.
@@ -95,18 +109,26 @@ export async function runAgent(input, { qloo, llm = null, now = () => Date.now()
     }
     log('tool', `Qloo Insights ×${members.length}: scored every spot for each player`, { players: members.map(m => m.name) });
 
-    ranked = []; rejected = [];
+    ranked = []; rejected = []; maybe = [];
     for (const c of candidates) {
       const chk = checkVenue(c, { needs, day, arriveAt, mode: qloo.mode });
       const memberAffinities = Object.fromEntries(members.map(m => [m.name, +(perMember[m.name][c.id] ?? (m.tagIds.length || m.entityIds.length ? 0 : 0.5)).toFixed(3)]));
-      const s = groupScore({ memberAffinities, distanceM: c.distanceM, radiusM, unverifiedCount: chk.unverified.length });
+      const verifiedCount = Object.values(chk.status).filter(x => x === 'ok').length;
+      const s = groupScore({ memberAffinities, distanceM: c.distanceM, radiusM, unverifiedCount: chk.unverified.length, verifiedCount });
       const row = { ...c, check: chk, memberAffinities, ...s };
-      (chk.pass ? ranked : rejected).push(row);
+      // Halal is a religious requirement: in live mode only Qloo-tagged halal spots go in the main list;
+      // "no evidence either way" spots are held back as a clearly-flagged fallback.
+      if (chk.pass && needs.includes('halal') && qloo.mode === 'live' && chk.status.halal !== 'ok') maybe.push(row);
+      else (chk.pass ? ranked : rejected).push(row);
     }
-    ranked.sort((a, b) => b.score - a.score);
-    log('observe', `${ranked.length} pass constraints, ${rejected.length} rejected`, { rejectedSample: rejected.slice(0, 4).map(r => `${r.name}: ${r.check.failed.join(', ')}`) });
+    for (const [acc, rows] of [[keep, ranked], [keepMaybe, maybe]]) for (const r of rows) { const p = acc.get(r.id); if (!p || r.score > p.score) acc.set(r.id, r); }
+    ranked = [...keep.values()].sort((a, b) => b.score - a.score);
+    maybe = [...keepMaybe.values()].filter(m => !keep.has(m.id));
+    const dietRejects = rejected.filter(r => r.check.failed.some(f => f.startsWith('not ')));
+    if (needs.length) log('think', `Diet guard: ruled out ${dietRejects.length} spot${dietRejects.length === 1 ? '' : 's'} on Qloo evidence${maybe.length ? `, held back ${maybe.length} with unconfirmed halal status` : ''}`, { rejectedSample: dietRejects.slice(0, 4).map(r => `${r.name}: ${r.check.failed[0]}`) });
+    log('observe', `${ranked.length} spots pass so far, ${rejected.length} rejected this round`, { rejectedSample: rejected.filter(r => !dietRejects.includes(r)).slice(0, 4).map(r => `${r.name}: ${r.check.failed.join(', ')}`) });
     if (ranked.length >= WANT_PASSING) break;
-    if (!reflect(`only ${ranked.length} spots fit everyone`)) break;
+    if (iter >= MAX_ITER || !reflect(`only ${ranked.length} spots fit everyone`)) break;
   }
 
   function reflect(why) {
@@ -116,7 +138,13 @@ export async function runAgent(input, { qloo, llm = null, now = () => Date.now()
   }
 
   // ---------- 6. Explain ----------
-  const top = ranked.slice(0, 5);
+  if (ranked.length < WANT_PASSING && maybe.length) {
+    maybe.sort((a, b) => b.score - a.score);
+    const fill = maybe.slice(0, WANT_PASSING - ranked.length);
+    ranked.push(...fill);
+    log('reflect', `Only ${ranked.length - fill.length} confirmed-halal spots; adding ${fill.length} with no pork evidence but unconfirmed halal status, flagged "halal? verify"`);
+  }
+  const top = ranked.slice(0, 5).map(({ tagIds, ...v }) => v);
   for (const v of top) v.why = templateWhy(v, members, needs, arriveAt);
   if (llm && top.length) {
     try {
@@ -133,7 +161,8 @@ export async function runAgent(input, { qloo, llm = null, now = () => Date.now()
     mode: qloo.mode, llm: llm ? llm.model : null, court, day, arriveAt, radiusM, needs,
     members: members.map(({ name, dietary, resolved }) => ({ name, dietary, resolved })),
     results: top,
-    rejected: rejected.slice(0, 6).map(r => ({ name: r.name, reasons: r.check.failed })),
+    rejected: [...rejected].sort((a, b) => (b.check.failed.some(f => f.startsWith('not ')) ? 1 : 0) - (a.check.failed.some(f => f.startsWith('not ')) ? 1 : 0)).slice(0, 8).map(r => ({ name: r.name, reasons: r.check.failed })),
+    heldBack: maybe.filter(m => !ranked.includes(m)).slice(0, 5).map(r => ({ name: r.name, reasons: r.check.unverified.length ? r.check.unverified : ['halal not confirmed on Qloo'] })),
     trace,
     stats: { qlooCalls: qloo.calls, iterations: iter, ms: now() - t0 },
   };

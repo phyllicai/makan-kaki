@@ -35,7 +35,7 @@
   <section class="panel" id="out">
     <div id="empty" class="empty">
       <div class="big">🍜</div>
-      <p>Add your group and hit <b>Find our makan spot</b>. The agent resolves each player’s taste through Qloo, scores every nearby spot <i>for every player</i>, enforces halal / vegetarian / late-night rules, and widens the search if nothing fits.</p>
+      <p>Add your group and hit <b>Find our makan spot</b>. The agent resolves each player’s taste through Qloo, scores every nearby spot <i>for every player</i>, enforces halal / vegetarian / no-pork / no-beef / late-night rules (a pork dish or bar tag on Qloo beats a “halal” tag), and widens the search if nothing fits.</p>
     </div>
     <div id="results" hidden>
       <div class="resHead"><h2>Top picks</h2><span id="stats" class="muted"></span></div>
@@ -57,6 +57,7 @@
         <label><input type="checkbox" value="halal"/> Halal</label>
         <label><input type="checkbox" value="vegetarian"/> Veg</label>
         <label><input type="checkbox" value="pork_free"/> No pork</label>
+        <label><input type="checkbox" value="no_beef"/> No beef</label>
       </div>
       <button class="x" title="remove">×</button>
     </div>

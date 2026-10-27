@@ -1,3 +1,5 @@
+import { assessDiet } from '../diet/rules.js';
+
 // Map a raw Qloo place entity (or mock entity) into the small shape the agent uses.
 export function haversineM(lat1, lon1, lat2, lon2) {
   const R = 6371000, r = x => (x * Math.PI) / 180;
@@ -6,22 +8,20 @@ export function haversineM(lat1, lon1, lat2, lon2) {
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
-const DIET_WORDS = {
-  halal: ['halal', 'muslim-friendly', 'muslim friendly'],
-  vegetarian: ['vegetarian', 'vegan', 'plant-based', 'plant based'],
-  pork_free: ['pork-free', 'pork free', 'no pork', 'halal'],
-};
-
 export function normalizePlace(e, origin = {}) {
   const p = e.properties || {};
   const loc = e.location || p.location || {};
   const lat = loc.lat ?? loc.latitude ?? p.geocode?.lat ?? null;
   const lon = loc.lon ?? loc.lng ?? loc.longitude ?? p.geocode?.lon ?? null;
-  const tags = (e.tags || p.tags || []).map(t => (typeof t === 'string' ? t : t.name)).filter(Boolean);
+  const rawTags = e.tags || p.tags || [];
+  const tags = rawTags.map(t => (typeof t === 'string' ? t : t.name)).filter(Boolean);
+  const tagIds = rawTags.map(t => (typeof t === 'string' ? '' : t.id || t.tag_id || '')).filter(Boolean);
   const keywords = (p.keywords || []).map(k => (typeof k === 'string' ? k : k.name)).filter(Boolean);
-  const hay = [...tags, ...keywords, p.description || '', e.name || ''].join(' | ').toLowerCase();
-  const dietary = {};
-  for (const [k, words] of Object.entries(DIET_WORDS)) dietary[k] = e.dietary?.[k] ?? (words.some(w => hay.includes(w)) ? true : null);
+  const dishes = (p.specialty_dishes || []).map(d => (typeof d === 'string' ? d : d.name)).filter(Boolean);
+  const diet = assessDiet({ name: e.name || '', tagNames: tags, tagIds, keywords, description: p.description || '', dishes });
+  const dietary = { ...diet.dietary };
+  // Mock venues carry authoritative flags; real Qloo data goes through the evidence rules above.
+  for (const k of Object.keys(e.dietary || {})) if (e.dietary[k] != null) dietary[k] = e.dietary[k];
   let distanceM = e.query?.distance ?? loc.distance ?? null;
   if (distanceM == null && lat != null && origin.lat != null) distanceM = Math.round(haversineM(origin.lat, origin.lon, lat, lon));
   return {
@@ -35,7 +35,10 @@ export function normalizePlace(e, origin = {}) {
     tags,
     keywords,
     hours: p.hours || e.hours || null,
-    dietary, // true = evidence found, null = unknown (never assumed false)
+    dietary, // true = positive evidence, false = conflicting evidence (e.g. pork on menu), null = unknown
+    dietEvidence: diet.evidence,
+    dietFlags: diet.flags,
+    tagIds,
     affinity: e.query?.affinity ?? e.affinity ?? null,
     explainability: e.query?.explainability || null,
     mock: !!e.mock,

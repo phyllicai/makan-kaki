@@ -85,7 +85,7 @@ export class MockQloo {
     return e ? e.cuisines : [];
   }
 
-  async placeInsights({ lat, lon, radiusM = 3000, entityIds = [], tagIds = [], restrictToIds = [], day, priceMax, take = 30 } = {}) {
+  async placeInsights({ lat, lon, radiusM = 3000, entityIds = [], tagIds = [], filterTagIds = [], restrictToIds = [], day, priceMax, take = 30 } = {}) {
     this.calls++;
     // Build a taste vector from signals (tags weight 1, liked places weight 0.7 per cuisine).
     const w = {};
@@ -93,6 +93,8 @@ export class MockQloo {
     for (const id of entityIds) for (const c of this.cuisinesOf(id)) w[c] = (w[c] || 0) + 0.7;
     const norm = Math.sqrt(Object.values(w).reduce((s, v) => s + v * v, 0)) || 1;
     let rows = this.catalog.map(e => normalizePlace(e, { lat, lon }));
+    if (filterTagIds.some(t => /halal/.test(t))) rows = rows.filter(r => r.dietary.halal === true);
+    else if (filterTagIds.some(t => /vegetarian|vegan/.test(t))) rows = rows.filter(r => r.dietary.vegetarian === true);
     if (restrictToIds.length) rows = rows.filter(r => restrictToIds.includes(r.id));
     else rows = rows.filter(r => r.distanceM <= radiusM && (priceMax == null || r.priceLevel <= priceMax));
     // Same archetype appears near several courts; keep only the nearest copy of each name.

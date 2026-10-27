@@ -1,0 +1,9 @@
+[
+ {"id":"intro","text":"It's ten thirty at night and badminton is over. Four kakis, one question: where do we makan? Aina needs halal. Priya is vegetarian. Wei Jie wants char kway teow, and Daniel wants a burger. Makan Kaki is an agent that settles it, using Qloo's taste graph, live."},
+ {"id":"setup","text":"Pick the court, the day, and when the game ends. Each player adds what they're craving, places they already love, and dietary needs: halal, vegetarian, no pork or no beef. Cravings become Qloo tags, and loved places become real Qloo entities."},
+ {"id":"run","text":"Hit find. The agent asks Qloo Insights for spots near the court that fit the whole group's taste and are open when we arrive. Because Aina needs halal, it makes a second pull filtered to Qloo's halal tags. Then it asks Qloo once per player, so it knows how much each person would like every spot."},
+ {"id":"results","text":"The top pick has high average happiness, and nobody is miserable. Here is each player's match, and the rules it checked, confirmed by Qloo tags. Anything Qloo can't confirm is marked verify, never assumed."},
+ {"id":"guard","text":"This is the part that matters in Malaysia. Real taste data is noisy, so the diet guard reads Qloo's own tags, keywords and signature dishes, in English, Malay and Chinese. Pork on the menu, a bar, or wine rules a place out for the halal player, even if it also carries a halal tag. Places with no halal tag are held back, not quietly passed."},
+ {"id":"trace","text":"Every step is in the agent trace: plan, Qloo tool calls, observe, and reflect. Let's try George Town in Penang. When fewer than three spots fit everyone, the agent reflects, widens the search, and asks Qloo again."},
+ {"id":"outro","text":"Makan Kaki is open source under the MIT license, and it's live right now. Qloo is the brain, the rules keep everyone safe, and supper is settled before the shuttlecock lands."}
+]

@@ -35,7 +35,7 @@ function render(r) {
     <article class="card ${i === 0 ? 'top1' : ''}">
       <div class="score"><b>${Math.round(v.score * 100)}</b>group fit</div>
       <h3><span class="rank">#${i + 1}</span>${esc(v.name)}</h3>
-      <div class="meta">${esc([km(v.distanceM), price(v.priceLevel), v.rating ? `★ ${v.rating}` : '', v.address].filter(Boolean).join(' · '))}</div>
+      <div class="meta">${esc([km(v.distanceM), price(v.priceLevel), v.rating ? `★ ${(+v.rating).toFixed(1)}` : '', v.address].filter(Boolean).join(' · '))}</div>
       <div class="chips">${v.tags.slice(0, 5).map(t => `<span class="chip">${esc(t)}</span>`).join('')}
         ${Object.entries(v.check.status || {}).map(([n, st]) => st === 'ok' ? `<span class="chip ok">✓ ${esc(n.replace('_', '-'))}</span>` : `<span class="chip warn">${esc(n.replace('_', '-'))}? verify</span>`).join('')}
       </div>
@@ -43,7 +43,8 @@ function render(r) {
       ${v.pitch ? `<div class="pitch">“${esc(v.pitch)}”</div>` : ''}
       <div class="why">${esc(v.why)}</div>
     </article>`).join('') : '<p>No spot fits everyone. Check the rejected list and loosen a constraint.</p>';
-  $('#rejected').innerHTML = r.rejected.length ? `<b>Ruled out</b><ul>${r.rejected.map(x => `<li>${esc(x.name)}: ${esc(x.reasons.join(', '))}</li>`).join('')}</ul>` : '';
+  $('#rejected').innerHTML = (r.rejected.length ? `<b>Ruled out</b><ul>${r.rejected.map(x => `<li>${esc(x.name)}: ${esc(x.reasons.join(', '))}</li>`).join('')}</ul>` : '')
+    + (r.heldBack?.length ? `<b>Held back (halal not confirmed on Qloo)</b><ul>${r.heldBack.map(x => `<li>${esc(x.name)}: ${esc(x.reasons.join(', '))}</li>`).join('')}</ul>` : '');
   $('#trace').innerHTML = r.trace.map(t => `<li><span class="k ${t.kind}">${t.kind}</span><div>${esc(t.title)}${detail(t.detail)}</div></li>`).join('');
   drawMap(r);
 }
